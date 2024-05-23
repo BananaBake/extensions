@@ -377,7 +377,7 @@
     if (!name) return;
     [
       ["click", "clicked"],
-      ["dbclick", "double clicked"],
+      ["dblclick", "double clicked"],
       ["contextmenu", "right clicked"],
       ["mouseover", "hovered"],
       ["mouseout", "hover ended"],
@@ -405,7 +405,7 @@
 
   let lastEventTargets = {
     click: "",
-    dbclick: "",
+    dblclick: "",
     contextmenu: "",
     mouseover: "",
     mouseout: "",
@@ -1155,7 +1155,7 @@
         case "clicked":
           return lastEventTargets.click === control;
         case "double clicked":
-          return lastEventTargets.dbclick === control;
+          return lastEventTargets.dblclick === control;
         case "right clicked":
           return lastEventTargets.contextmenu === control;
         case "hovered":
@@ -1172,7 +1172,7 @@
         case "clicked":
           return lastEventTargets.click || "";
         case "double clicked":
-          return lastEventTargets.dbclick || "";
+          return lastEventTargets.dblclick || "";
         case "right clicked":
           return lastEventTargets.contextmenu || "";
         case "hovered":
