@@ -146,7 +146,7 @@
         controls.right["fullscreen"] = fullScreen;
         controls.all["fullscreen"] = fullScreen;
       }
-      return;
+      return controls;
     }
     duplicates = {};
     if (leftContainer) {
@@ -1200,8 +1200,6 @@
 
     toggleMenuEmbed() {
       menuEmbedded = !menuEmbedded;
-      // @ts-ignore
-      blocks[blocks.length - 2].hideFromPalette = menuEmbedded;
       // @ts-ignore
       blocks[blocks.length - 1].text = menuEmbedded
         ? "use text input instead of menu"
