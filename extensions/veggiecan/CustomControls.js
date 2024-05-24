@@ -358,7 +358,7 @@
     ele.cControlIsCustom = true;
     ele.style.marginLeft = `${eleMargin.l || 0}px`;
     ele.style.marginRight = `${eleMargin.r || 0}px`;
-    ele.style.opacity = `${eleOpacity || 1}`;
+    ele.style.opacity = `${eleOpacity || 100}%`;
     ele.draggable = false;
     addListeners(ele);
     return ele;
@@ -401,7 +401,7 @@
   let eleText = "";
   let eleColor = "#000000";
   let eleMargin = { l: 0, r: 0 };
-  let eleOpacity = 1;
+  let eleOpacity = 100;
 
   let lastEventTargets = {
     click: "",
@@ -421,7 +421,7 @@
     eleIcon = "";
     eleText = "";
     eleMargin = { l: 0, r: 0 };
-    eleOpacity = 1;
+    eleOpacity = 100;
   }
 
   /**
@@ -515,11 +515,11 @@
     {
       opcode: "setControlOpacity",
       blockType: Scratch.BlockType.COMMAND,
-      text: "set opacity to [OPACITY]",
+      text: "set opacity to [OPACITY]%",
       arguments: {
         OPACITY: {
           type: Scratch.ArgumentType.NUMBER,
-          defaultValue: "0.5",
+          defaultValue: "50",
         },
       },
       extensions: ["colours_control"],
@@ -613,11 +613,31 @@
       },
       extensions: ["colours_control"],
     },
-    // setMarginOf intentionally NOT included
+    {
+      opcode: "setMarginOf",
+      blockType: Scratch.BlockType.COMMAND,
+      text: "set [SIDE] margin of [CONTROL] to [MARGIN] px",
+      arguments: {
+        CONTROL: {
+          type: Scratch.ArgumentType.STRING,
+          defaultValue: "my control",
+        },
+        SIDE: {
+          type: Scratch.ArgumentType.STRING,
+          menu: "marginSideMenu",
+          defaultValue: "left",
+        },
+        MARGIN: {
+          type: Scratch.ArgumentType.NUMBER,
+          defaultValue: "10",
+        },
+      },
+      extensions: ["colours_control"],
+    },
     {
       opcode: "setOpacityOf",
       blockType: Scratch.BlockType.COMMAND,
-      text: "set opacity of [CONTROL] to [OPACITY]",
+      text: "set opacity of [CONTROL] to [OPACITY]%",
       arguments: {
         CONTROL: {
           type: Scratch.ArgumentType.STRING,
@@ -625,7 +645,7 @@
         },
         OPACITY: {
           type: Scratch.ArgumentType.NUMBER,
-          defaultValue: "0.5",
+          defaultValue: "50",
         },
       },
       extensions: ["colours_control"],
@@ -786,23 +806,9 @@
     "---",
 
     {
-      opcode: "barExists",
-      blockType: Scratch.BlockType.BOOLEAN,
-      disableMonitor: true,
-      text: "control bar exists?",
-      extensions: ["colours_control"],
-    },
-    {
-      opcode: "canLoad",
-      blockType: Scratch.BlockType.BOOLEAN,
-      text: "can load [URL]?",
-      arguments: {
-        URL: {
-          type: Scratch.ArgumentType.STRING,
-          defaultValue: "https://extensions.turbowarp.org/dango.png",
-        },
-      },
-      extensions: ["colours_control"],
+      func: "toggleMenuEmbed",
+      blockType: Scratch.BlockType.BUTTON,
+      text: "Use controls menu istead of text input",
     },
     {
       opcode: "utilMenu",
@@ -818,9 +824,45 @@
       extensions: ["colours_control"],
     },
     {
-      func: "toggleMenuEmbed",
-      blockType: Scratch.BlockType.BUTTON,
-      text: "use controls menu istead of text input",
+      opcode: "barExists",
+      blockType: Scratch.BlockType.BOOLEAN,
+      disableMonitor: true,
+      text: "control bar exists?",
+      extensions: ["colours_control"],
+    },
+    {
+      opcode: "refreshControls",
+      blockType: Scratch.BlockType.COMMAND,
+      text: "refresh controls",
+      extensions: ["colours_control"],
+    },
+
+    "---",
+
+    // These may be in other extensions, but they fit here perfectly too
+    {
+      opcode: "canLoad",
+      blockType: Scratch.BlockType.BOOLEAN,
+      text: "can load [URL]?",
+      arguments: {
+        URL: {
+          type: Scratch.ArgumentType.STRING,
+          defaultValue: "https://extensions.turbowarp.org/dango.png",
+        },
+      },
+      extensions: ["colours_control"],
+    },
+    {
+      opcode: "isPackaged",
+      blockType: Scratch.BlockType.BOOLEAN,
+      text: "is packaged?",
+      extensions: ["colours_control"],
+    },
+    {
+      opcode: "colorScheme",
+      blockType: Scratch.BlockType.REPORTER,
+      text: "color scheme",
+      extensions: ["colours_control"],
     },
   ];
 
@@ -877,7 +919,15 @@
           },
           controlPropertyMenu: {
             acceptReporters: true,
-            items: ["icon", "text", "text color", "opacity", "type"],
+            items: [
+              "icon",
+              "text",
+              "text color",
+              "opacity",
+              "left margin",
+              "right margin",
+              "type",
+            ],
             extensions: ["colours_control"],
           },
           eventTypeMenu: {
@@ -942,7 +992,8 @@
         eleIcon = url;
       } else {
         const canLoad = await Scratch.canFetch(icon);
-        if (canLoad) eleIcon = icon;
+        // Here we default to " " so the icon still gets created
+        eleIcon = canLoad ? icon : " ";
       }
     }
 
@@ -969,7 +1020,7 @@
 
     setControlOpacity(args) {
       const opacity = Scratch.Cast.toNumber(args.OPACITY);
-      eleOpacity = Math.min(Math.max(opacity, 0), 1);
+      eleOpacity = Math.min(Math.max(opacity, 0), 100);
     }
 
     appendControl(args) {
@@ -1050,12 +1101,25 @@
       controlElement.style.color = color;
     }
 
+    setMarginOf(args) {
+      const control = Scratch.Cast.toString(args.CONTROL).toLowerCase();
+      const side = Scratch.Cast.toString(args.SIDE).toLowerCase();
+      const margin = Scratch.Cast.toNumber(args.MARGIN);
+      const controlElement = getControlByName(control);
+      if (!controlElement) return;
+      if (side === "left") {
+        controlElement.style.marginLeft = margin + "px";
+      } else if (side === "right") {
+        controlElement.style.marginRight = margin + "px";
+      }
+    }
+
     setOpacityOf(args) {
       const control = Scratch.Cast.toString(args.CONTROL).toLowerCase();
       const opacity = Scratch.Cast.toNumber(args.OPACITY);
       const controlElement = getControlByName(control);
       if (!controlElement) return;
-      controlElement.style.opacity = "" + Math.min(Math.max(opacity, 0), 1);
+      controlElement.style.opacity = Math.min(Math.max(opacity, 0), 100) + "%";
     }
 
     hide(args) {
@@ -1104,16 +1168,20 @@
         }
         return controlElement.textContent || "";
       }
-      // Not all browsers support getComputedStyleMap(), so we're just wrapping this in a try {} block
-      try {
-        if (property === "text color") {
-          const color = controlElement.computedStyleMap().get("color");
-          return toHex("" + color) || "";
-        }
-        if (property === "opacity") {
-          return controlElement.computedStyleMap().get("opacity") || "";
-        }
-      } catch (e) {}
+      let computedStyle = window.getComputedStyle(controlElement);
+      if (property === "text color") {
+        const color = computedStyle.color;
+        return toHex(color) || "";
+      }
+      if (property === "opacity") {
+        return parseFloat(computedStyle.opacity) * 100;
+      }
+      if (property === "left margin") {
+        return computedStyle.marginLeft;
+      }
+      if (property === "right margin") {
+        return computedStyle.marginRight;
+      }
       return "";
     }
 
@@ -1183,36 +1251,25 @@
       return "";
     }
 
-    barExists() {
-      getControls();
-      return !!controlBarExists;
-    }
-
-    async canLoad(args) {
-      const url = Scratch.Cast.toString(args.URL);
-      const can = await Scratch.canFetch(url);
-      return !!can;
-    }
-
-    utilMenu(args) {
-      return args.OPTION || "";
-    }
-
     toggleMenuEmbed() {
       menuEmbedded = !menuEmbedded;
       // @ts-ignore
       blocks[blocks.length - 1].text = menuEmbedded
-        ? "use text input instead of menu"
-        : "use menu instead of text input";
-      blocks.forEach((block, i) => {
+        ? "Use text input instead of menu"
+        : "Use menu instead of text input";
+      blocks.forEach((block) => {
         // @ts-ignore
         if (block.arguments?.CONTROL) {
           if (menuEmbedded) {
             // @ts-ignore
             block.arguments.CONTROL.menu = "utilMenu";
+            // @ts-ignore
+            delete block.arguments.CONTROL.defaultValue;
           } else {
             // @ts-ignore
             delete block.arguments.CONTROL.menu;
+            // @ts-ignore
+            block.arguments.CONTROL.defaultValue = "my control";
           }
         }
       });
@@ -1222,6 +1279,37 @@
         alert(
           "You will have to leave the editor and come back in for the changes to come into effect"
         );
+    }
+
+    utilMenu(args) {
+      return args.OPTION || "";
+    }
+
+    barExists() {
+      getControls();
+      return !!controlBarExists;
+    }
+
+    refreshControls() {
+      listControls();
+    }
+
+    async canLoad(args) {
+      const url = Scratch.Cast.toString(args.URL);
+      const canLoad = await Scratch.canFetch(url);
+      return canLoad;
+    }
+
+    isPackaged() {
+      // @ts-ignore
+      return !!window.scaffolding;
+    }
+
+    colorScheme() {
+      const root = document.documentElement;
+      const computedStyle = window.getComputedStyle(root);
+      const colorScheme = computedStyle.getPropertyValue("--color-scheme");
+      return colorScheme.trim();
     }
   }
 
@@ -1235,6 +1323,7 @@
         background: none;
         user-select: none;
         user-drag: none;
+        context-menu: none;
         cursor: pointer;
       }
 
@@ -1259,6 +1348,7 @@
         whitespace: nowrap;
         user-select: none;
         cursor: pointer;
+        context-menu: none;
       }
 
       .c-control-label {
@@ -1267,12 +1357,14 @@
         padding: 0.25;
         background: none;
         user-select: none;
+        context-menu: none;
       }
 
       .c-control-label-icon {
         margin: 0.25rem;
         height: 16px;
         background: inherit;
+        context-menu: none;
       }
 
       .c-control-label-text {
